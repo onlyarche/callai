@@ -359,4 +359,4 @@ ls -lT ~/Library/Developer/Xcode/DerivedData/callai-*/Build/Products/Debug/calla
 
 ## 라이선스
 
-미정 (개인 빌드 단계).
+free
