@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+*.xccheckout
+*.moved-aside
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Worktrees (defensive — harness-managed worktrees should not be committed)
+.worktrees/
+worktrees/
+
+# Local-only agent/skill/codex tooling configs (per-user, not shared)
+.claude/
+.agents/
+.codex/
+
+# Dev-only design/process docs — kept locally, not published with the repo
+PLAN.md
+PROGRESS.md
+AGENTS.md
+callai.app.zip
