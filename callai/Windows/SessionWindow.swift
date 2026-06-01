@@ -8,6 +8,7 @@ import SwiftUI
 // new-conversation mode) which fully owns the send/stream/persist/cancel path.
 struct SessionWindow: View {
     private let client: LLMClient
+    private let payloadID: UUID
     private let pendingAttachment: Data?
     private let screenRecordingDenied: Bool
     private let captureFailureMessage: String?
@@ -21,6 +22,7 @@ struct SessionWindow: View {
 
     init(
         client: LLMClient,
+        payloadID: UUID = UUID(),
         pendingAttachment: Data? = nil,
         screenRecordingDenied: Bool = false,
         captureFailureMessage: String? = nil,
@@ -31,6 +33,7 @@ struct SessionWindow: View {
         onRelaunchForPermission: @escaping () -> Void = {}
     ) {
         self.client = client
+        self.payloadID = payloadID
         self.pendingAttachment = pendingAttachment
         self.screenRecordingDenied = screenRecordingDenied
         self.captureFailureMessage = captureFailureMessage
@@ -45,6 +48,7 @@ struct SessionWindow: View {
         ConversationHostView(
             client: client,
             store: ConversationStore(modelContext: modelContext),
+            payloadID: payloadID,
             pendingAttachment: pendingAttachment,
             screenRecordingDenied: screenRecordingDenied,
             captureFailureMessage: captureFailureMessage,

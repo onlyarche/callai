@@ -40,6 +40,8 @@ final class AppCoordinator {
     @ObservationIgnored
     @AppStorage("hasCompletedFirstLaunch") private var hasCompletedFirstLaunch = false
 
+    private(set) var sessionPresentationID = UUID()
+
     // WHY: captured-at timestamp is reserved for a future TTL policy on stale
     // attachments. Held but unused in M6 — preserved per the architect's spec.
     private struct PendingScreenshot { let data: Data; let capturedAt: Date }
@@ -127,6 +129,9 @@ final class AppCoordinator {
     //     time to appear).
     private func presentWindow(_ id: String) {
         openWindowAction?(id)
+        if id == Self.sessionWindowID {
+            sessionPresentationID = UUID()
+        }
         NSApp.activate(ignoringOtherApps: true)
         NSRunningApplication.current.activate(options: [.activateAllWindows])
         DispatchQueue.main.async { [weak self] in

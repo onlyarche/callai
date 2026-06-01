@@ -81,8 +81,14 @@ final class ConversationStore {
     // the model receives every prior turn (PLAN §5-2) — not a single-shot
     // request. The caller persists the new user Message before calling this.
     func makeRequest(for conversation: Conversation, model: String, systemPrompt: String? = nil) -> ChatRequest {
-        var messages = conversation.orderedMessages.map {
-            ChatRequest.Message(role: $0.role, content: $0.content, images: $0.images)
+        let orderedMessages = conversation.orderedMessages
+        let currentTurnID = orderedMessages.last?.id
+        var messages = orderedMessages.map {
+            ChatRequest.Message(
+                role: $0.role,
+                content: $0.content,
+                images: $0.id == currentTurnID ? $0.images : nil
+            )
         }
         // M8: optional system prompt is prepended so it precedes the full
         // multi-turn history. Defaulted nil keeps prior call sites unchanged.

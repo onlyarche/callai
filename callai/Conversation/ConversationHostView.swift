@@ -24,6 +24,7 @@ struct ConversationHostView: View {
 
     @State private var composer = ComposerViewModel()
     @State private var streamingState: StreamingState = .idle
+    @State private var sendPreparationTask: Task<Void, Never>?
     @State private var sendTask: Task<Void, Never>?
 
     // nil = new-conversation mode: the Conversation is created lazily on the
@@ -38,6 +39,7 @@ struct ConversationHostView: View {
     // subsequent value the parent supplies — exactly the regression that hid
     // the screenshot preview and CaptureFailureBanner. The .onChange handlers
     // below copy new incoming values into @State so the UI reflects them.
+    let incomingPayloadID: UUID
     let incomingPendingAttachment: Data?
     let incomingScreenRecordingDenied: Bool
     let incomingCaptureFailureMessage: String?
@@ -59,6 +61,7 @@ struct ConversationHostView: View {
         client: LLMClient,
         store: ConversationStore,
         conversation: Conversation? = nil,
+        payloadID: UUID = UUID(),
         pendingAttachment: Data? = nil,
         screenRecordingDenied: Bool = false,
         captureFailureMessage: String? = nil,
@@ -75,6 +78,7 @@ struct ConversationHostView: View {
         self.settings = settings
         self.permissions = permissions
         self.onRelaunchForPermission = onRelaunchForPermission
+        self.incomingPayloadID = payloadID
         self.incomingPendingAttachment = pendingAttachment
         self.incomingScreenRecordingDenied = screenRecordingDenied
         self.incomingCaptureFailureMessage = captureFailureMessage
@@ -156,6 +160,10 @@ struct ConversationHostView: View {
         // called repeatedly with the same id, so the parent (SessionScene) can
         // push fresh values without our @State noticing them. These onChange
         // handlers copy incoming-parameter updates into @State on each visit.
+        .onChange(of: incomingPayloadID) { _, _ in
+            drainIncomingAttachment()
+            adoptIncomingBanners()
+        }
         .onChange(of: incomingPendingAttachment) { _, _ in drainIncomingAttachment() }
         .onChange(of: incomingScreenRecordingDenied) { _, _ in adoptIncomingBanners() }
         .onChange(of: incomingCaptureFailureMessage) { _, _ in adoptIncomingBanners() }
@@ -168,6 +176,7 @@ struct ConversationHostView: View {
             await refreshAvailableModels()
         }
         .onDisappear {
+            sendPreparationTask?.cancel()
             sendTask?.cancel()
             cancelVoiceInput()
         }
@@ -230,14 +239,29 @@ struct ConversationHostView: View {
     }
 
     private func send() {
-        // WHY: race handling (decision 9) — if the user fires send while a
-        // voice recording is in flight, stop the recorder first so the final
-        // STT text lands in the composer before makeUserMessage() reads it.
+        guard !composer.isSending, hasSendableContent else { return }
+        composer.isSending = true
+        sendPreparationTask?.cancel()
+        sendPreparationTask = Task { @MainActor in
+            await sendAfterVoiceFlush()
+            sendPreparationTask = nil
+        }
+    }
+
+    private func sendAfterVoiceFlush() async {
         if composer.isRecording {
-            stopVoiceInput()
+            await stopVoiceInputAndWaitForFinal()
         }
 
-        guard composer.canSend else { return }
+        guard !Task.isCancelled else {
+            composer.isSending = false
+            return
+        }
+
+        guard hasSendableContent else {
+            composer.isSending = false
+            return
+        }
 
         // Lazy creation: the first send both creates and persists exactly one
         // Conversation. The user Message is appended (and persisted) before
@@ -260,7 +284,6 @@ struct ConversationHostView: View {
             model: composer.model,
             systemPrompt: settings.systemPrompt.isEmpty ? nil : settings.systemPrompt
         )
-        composer.isSending = true
         streamingState = .streaming(text: "")
 
         sendTask?.cancel()
@@ -293,7 +316,16 @@ struct ConversationHostView: View {
         }
     }
 
+    private var hasSendableContent: Bool {
+        guard !composer.attachedImageDisallowed else { return false }
+        let trimmedText = composer.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPartial = (composer.partialTranscript ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return composer.attachedImage != nil || !trimmedText.isEmpty || !trimmedPartial.isEmpty
+    }
+
     private func cancel() {
+        sendPreparationTask?.cancel()
+        sendPreparationTask = nil
         sendTask?.cancel()
         sendTask = nil
         composer.isSending = false
@@ -377,6 +409,38 @@ struct ConversationHostView: View {
     private func stopVoiceInput() {
         recorder.stop()
         composer.setIsRecording(false)
+    }
+
+    private func stopVoiceInputAndWaitForFinal() async {
+        guard let task = recordingTask else {
+            recorder.stop()
+            composer.setIsRecording(false)
+            return
+        }
+        recorder.stop()
+        composer.setIsRecording(false)
+
+        let completed = await Self.waitForRecordingTask(task, timeoutNanoseconds: 1_500_000_000)
+        if !completed {
+            task.cancel()
+        }
+        recordingTask = nil
+    }
+
+    private static func waitForRecordingTask(_ task: Task<Void, Never>, timeoutNanoseconds: UInt64) async -> Bool {
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                await task.value
+                return true
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: timeoutNanoseconds)
+                return false
+            }
+            let completed = await group.next() ?? false
+            group.cancelAll()
+            return completed
+        }
     }
 
     private func cancelVoiceInput() {

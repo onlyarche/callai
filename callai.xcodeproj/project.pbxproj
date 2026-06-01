@@ -14,18 +14,18 @@
 		CL00000000000000000011 /* Exceptions for "callai" folder in "callai" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Audio/.gitkeep,
+				Capture/.gitkeep,
+				Composer/.gitkeep,
+				Conversation/.gitkeep,
+				Hotkeys/.gitkeep,
 				Info.plist,
-				"Audio/.gitkeep",
-				"Capture/.gitkeep",
-				"Composer/.gitkeep",
-				"Conversation/.gitkeep",
-				"Hotkeys/.gitkeep",
-				"LLM/.gitkeep",
-				"LLM/Providers/.gitkeep",
-				"MenuBar/.gitkeep",
-				"Permissions/.gitkeep",
-				"Settings/.gitkeep",
-				"Windows/.gitkeep",
+				LLM/.gitkeep,
+				LLM/Providers/.gitkeep,
+				MenuBar/.gitkeep,
+				Permissions/.gitkeep,
+				Settings/.gitkeep,
+				Windows/.gitkeep,
 			);
 			target = CL00000000000000000040 /* callai */;
 		};
@@ -41,6 +41,10 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFileReference section */
+		CL00000000000000000041 /* callai.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = callai.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		CL00000000000000000020 /* Frameworks */ = {
@@ -279,6 +283,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M9XCJFZ5FC;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -305,6 +310,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M9XCJFZ5FC;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

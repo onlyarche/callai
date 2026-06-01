@@ -5,15 +5,20 @@ import SwiftUI
 struct CallaiApp: App {
     @State private var coordinator = AppCoordinator()
 
-    // WHY: one app-lifetime container so conversations survive relaunch and
-    // M5's MainWindow can later attach the same store.
-    private let modelContainer: ModelContainer = {
+    private let modelContainer: ModelContainer = Self.makeModelContainer()
+
+    private static func makeModelContainer() -> ModelContainer {
         do {
             return try ModelContainer(for: Conversation.self, Message.self)
         } catch {
-            fatalError("SwiftData ModelContainer 생성 실패: \(error)")
+            let fallback = ModelConfiguration(isStoredInMemoryOnly: true)
+            do {
+                return try ModelContainer(for: Conversation.self, Message.self, configurations: fallback)
+            } catch {
+                fatalError("SwiftData ModelContainer 생성 실패: \(error)")
+            }
         }
-    }()
+    }
 
     var body: some Scene {
         MenuBarExtra {
@@ -102,6 +107,7 @@ private struct MenuBarScene: View {
 // the values stick for the lifetime of the window.
 private struct SessionScene: View {
     let coordinator: AppCoordinator
+    @State private var payloadID: UUID = UUID()
     @State private var pendingAttachment: Data?
     @State private var screenRecordingDenied: Bool = false
     @State private var captureFailureMessage: String?
@@ -109,6 +115,7 @@ private struct SessionScene: View {
     var body: some View {
         SessionWindow(
             client: coordinator.llmClient,
+            payloadID: payloadID,
             pendingAttachment: pendingAttachment,
             screenRecordingDenied: screenRecordingDenied,
             captureFailureMessage: captureFailureMessage,
@@ -119,10 +126,18 @@ private struct SessionScene: View {
             onRelaunchForPermission: coordinator.relaunchForPermissionChange
         )
         .onAppear {
-            pendingAttachment = coordinator.consumePendingAttachment()
-            screenRecordingDenied = coordinator.consumePendingScreenRecordingDenial()
-            captureFailureMessage = coordinator.consumePendingCaptureFailureMessage()
+            consumePendingPayload()
         }
+        .onChange(of: coordinator.sessionPresentationID) { _, _ in
+            consumePendingPayload()
+        }
+    }
+
+    private func consumePendingPayload() {
+        payloadID = coordinator.sessionPresentationID
+        pendingAttachment = coordinator.consumePendingAttachment()
+        screenRecordingDenied = coordinator.consumePendingScreenRecordingDenial()
+        captureFailureMessage = coordinator.consumePendingCaptureFailureMessage()
     }
 }
 

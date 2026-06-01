@@ -147,7 +147,7 @@ struct SettingsView: View {
         Section("기타") {
             Toggle("응답 자동 복사", isOn: $settings.autoCopyResponse)
             Toggle("창 항상 최상위", isOn: $settings.alwaysOnTop)
-            Text("(현재는 설정만 저장됩니다 — 적용은 추후 버전)")
+            Text("응답 자동 복사는 즉시 적용됩니다. 창 항상 최상위는 현재 저장만 됩니다.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
